@@ -17,7 +17,7 @@ from mcvapi.blobs.order_by_position import combinations
 
 from pythonvideoannotator_models_gui.dialogs import DatasetsDialog
 from pythonvideoannotator_models_gui.models.video.objects.object2d.datasets.contours import Contours
-from pythonvideoannotator.utils.tools import points_angle, min_dist_angles
+from pythonvideoannotator_models.utils.tools import points_angle, min_dist_angles
 
 
 class FindOrientationWindow(BaseWidget):
@@ -38,8 +38,8 @@ class FindOrientationWindow(BaseWidget):
 		self._progress  	= ControlProgress('Progress')
 		self._apply 		= ControlButton('Apply', checkable=True)
 
-		self._min_steps 	= ControlSlider('Minimum steps', 20, 1, 1000)
-		self._min_dist 		= ControlSlider('Minumum distance', 30, 1, 1000)
+		self._min_steps 	= ControlSlider('Minimum steps', default=20,  minimum=1, maximum=1000)
+		self._min_dist 		= ControlSlider('Minumum distance', default=30,  minimum=1, maximum=1000)
 
 		self._panel.value = self.contours_dialog = DatasetsDialog(self)
 		self.contours_dialog.datasets_filter = lambda x: isinstance(x, Contours)
