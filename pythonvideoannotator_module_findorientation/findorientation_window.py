@@ -83,6 +83,7 @@ class FindOrientationWindow(BaseWidget):
     
     
     def __apply_event(self):
+        IMAGE_SIZE = 150
 
         if self._apply.checked and self._apply.label == 'Apply':
             self._panel.enabled         = False
@@ -93,7 +94,7 @@ class FindOrientationWindow(BaseWidget):
             total_2_analyse  = 0
             for video, (begin, end), datasets in self.contours_dialog.selected_data:
                 capture          = video.video_capture
-                total_2_analyse += (end-begin)*len(datasets)*5
+                total_2_analyse += (end-begin)#*len(datasets)*1
 
             self._progress.min = 0
             self._progress.max = total_2_analyse
@@ -110,10 +111,26 @@ class FindOrientationWindow(BaseWidget):
                 front_frames = []
                 for dataset in datasets:
 
+                    for i in range(begin, end):
+                        self._progress.value = count; count+=1
+                        
+                        ok, img   = dataset.get_image(i, mask=True, angle='up', size=(IMAGE_SIZE,IMAGE_SIZE) )
+                       
+                        if ok:
+                            cv2.normalize(img,   img,   0, 255, cv2.NORM_MINMAX)
+
+                            v1 = img[:img.shape[0]/2].sum() / np.count_nonzero(img[:img.shape[0]/2])
+                            v2 = img[img.shape[0]/2:].sum() / np.count_nonzero(img[img.shape[0]/2:])
+
+                            if v1<v2: dataset.flip(i)
+
+
+
+            
+            """
                     window      = 30
                     min_walked  = 50
                     savitzky_golay_window_size = (window+1 if (window % 2 )==0 else window)
-
 
                     if debug_mode:
                         # create the values for debug ##########################################
@@ -167,8 +184,8 @@ class FindOrientationWindow(BaseWidget):
                     
                     trainning_frames = []
 
-                    IMAGE_SIZE = 250
-                    MAX_TRAINNING_SET = 200
+                    IMAGE_SIZE         = 150
+                    MAX_TRAINNING_SET  = 400
 
                     model = cv2.ml.ANN_MLP_create()
                     layer_sizes = np.int32([IMAGE_SIZE**2, IMAGE_SIZE, IMAGE_SIZE, 2])
@@ -179,7 +196,6 @@ class FindOrientationWindow(BaseWidget):
                     model.setBackpropWeightScale(0.001)
                     model.setTermCriteria((cv2.TERM_CRITERIA_COUNT, 20, 0.01))
                     model.setActivationFunction(cv2.ml.ANN_MLP_SIGMOID_SYM, 2, 1)
-
 
                     train   = []
                     answers = []
@@ -192,8 +208,9 @@ class FindOrientationWindow(BaseWidget):
 
                         ### Debug ##############################################################
                         if debug_mode: 
-                            v1.set_value(i, walked_distance[i])
-                            v2.set_value(i, dir_walked_distance[i])
+                            #v1.set_value(i, walked_distance[i])
+                            #v2.set_value(i, dir_walked_distance[i])
+                            pass
                         ########################################################################
                         triangle_angle = dataset.get_minimumenclosingtriangle_angle(i)
                         if triangle_angle is None: continue
@@ -205,23 +222,32 @@ class FindOrientationWindow(BaseWidget):
                             min_dist_angles(dataset_angle, triangle_angle)<(np.pi/2):
                             trainning_frames[i] = True
 
-                            if len(train)<MAX_TRAINNING_SET:
+                            if MAX_TRAINNING_SET is None or len(train)<MAX_TRAINNING_SET:
 
-                                ok1, img_up   = dataset.get_image(i, mask=True, up=True, margin=20, size=(IMAGE_SIZE,IMAGE_SIZE) )
-                                ok2, img_down = dataset.get_image(i, mask=True, angle=dataset_angle+np.pi, up=True, margin=20, size=(IMAGE_SIZE,IMAGE_SIZE) )
+                                ok1, img_up   = dataset.get_image(i, mask=True, angle='up', size=(IMAGE_SIZE,IMAGE_SIZE) )
+                                ok2, img_down = dataset.get_image(i, mask=True, angle='down', size=(IMAGE_SIZE,IMAGE_SIZE) )
                                 
                                 if ok1 and ok2:
+                                    cv2.normalize(img_up, img_up, 0, 255, cv2.NORM_MINMAX)
+                                    cv2.normalize(img_down, img_down, 0, 255, cv2.NORM_MINMAX)
+
                                     train.append(img_up[:,:,0].flatten())
                                     train.append(img_down[:,:,0].flatten())
                                     answers.append([1,0])
                                     answers.append([0,1])
 
-                                    #cv2.imwrite('/home/ricardo/Downloads/test/{0}.png'.format(i), img_down)
+                                    v1.set_value(i, 
+                                        img_up[:img_up.shape[0]/2].sum() / np.count_nonzero(img_up[:img_up.shape[0]/2])
+                                    )
+                                    v2.set_value(i, 
+                                        img_up[img_up.shape[0]/2:].sum() / np.count_nonzero(img_up[img_up.shape[0]/2:])
+                                    )
+
+                                    cv2.imwrite('/home/ricardo/Downloads/test/{0}.png'.format(i), img_up)
                                     if debug_mode: vtrainning.set_value(i, 1)    
                                 
 
                         
-
                     train   = np.float32(train)
                     answers = np.float32(answers)
                     model.train(train, cv2.ml.ROW_SAMPLE, answers)
@@ -244,9 +270,11 @@ class FindOrientationWindow(BaseWidget):
 
                         if not trainning_frames[i]:
 
-                            ok, img = dataset.get_image(i, mask=True, up=True, margin=20, size=(IMAGE_SIZE,IMAGE_SIZE) )
+                            ok, img = dataset.get_image(i, mask=True, angle='up', size=(IMAGE_SIZE,IMAGE_SIZE) )
                             
                             if ok:
+                                cv2.normalize(img, img)
+                                
                                 _ret, resp = model.predict(np.float32([img[:,:,0].flatten()]))
                                 if resp.argmax()==1: dataset.flip(i) 
 
@@ -256,52 +284,14 @@ class FindOrientationWindow(BaseWidget):
                                     v3.set_value(i,resp.argmax()) 
 
                        
-
-                    angles2smooth = []
-                    for i in range(begin, end):
-                        a = dataset.get_angle_diff_to_zero(i)
-
-                        angles2smooth.append( 0 if a is None else a )
-                        self._progress.value = count; count+=1
-                    smoothedangles = savitzky_golay(np.array(angles2smooth), window_size=31) 
-
-                    if debug_mode:
-                        # create the values for debug ##########################################
-                        v1 = dataset.object2d.create_value()
-                        v1.name = 'Est. orient. - step4 - angles'
-                        v2 = dataset.object2d.create_value()
-                        v2.name = 'Est. orient. - step4 - smooth angles'
-                        
-                        for i in range(begin, end):
-                            if i>=len(angles2smooth): break
-                            if i>=len(smoothedangles): break
-                            v1.set_value(i, angles2smooth[i])
-                            v2.set_value(i, smoothedangles[i])
-
-                        v1 = dataset.object2d.create_value()
-                        v1.name = 'Est. orient. - step5 - flipped'
-
-                    for i in range(begin, end):
-                        self._progress.value = count; count+=1
-                        angle    = dataset.get_angle_diff_to_zero(i)
-                        if angle is None: continue
-                        if i>=len(smoothedangles): continue
-                        
-                        if debug_mode: v1.set_value(i, 0)
-
-                        smoothed = smoothedangles[i]
-                        if min_dist_angles(angle, smoothed)>(np.pi/2):
-                            dataset.flip(i)
-                            if debug_mode: v1.set_value(i, 1)
-                        
-                    
+            """
+        
 
                         
 
                         
 
-                self._progress.value = count
-                count += 1
+                
 
             self._min_dist.enabled      = True
             self._min_steps.enabled     = True
