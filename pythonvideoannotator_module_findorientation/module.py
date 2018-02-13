@@ -1,5 +1,5 @@
 import cv2, os, simplejson as json
-from pysettings import conf
+from pyforms import conf
 from pythonvideoannotator_module_findorientation.findorientation_window import FindOrientationWindow
 
 
