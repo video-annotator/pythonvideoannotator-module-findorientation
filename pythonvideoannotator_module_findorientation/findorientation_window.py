@@ -31,7 +31,7 @@ from sklearn.svm import SVC
 class FindOrientationWindow(BaseWidget):
 
     def __init__(self, parent=None):
-        super(FindOrientationWindow, self).__init__('Background finder', parent_win=parent)
+        super(FindOrientationWindow, self).__init__('Estimate countour orientation', parent_win=parent)
         self.mainwindow = parent
 
         self.set_margin(5)
@@ -42,10 +42,10 @@ class FindOrientationWindow(BaseWidget):
         self._panel         = ControlEmptyWidget('Videos')
         self._progress      = ControlProgress('Progress')
         self._apply         = ControlButton('Apply', checkable=True)
-        self._debug         = ControlCheckBox('Create all the intermediam values')
+        self._debug         = ControlCheckBox('Create all the intermediate values')
 
         self._min_steps     = ControlSlider('Minimum steps', default=20,  minimum=1, maximum=1000)
-        self._min_dist      = ControlSlider('Minumum distance', default=30,  minimum=1, maximum=1000)
+        self._min_dist      = ControlSlider('Minimum distance', default=30,  minimum=1, maximum=1000)
 
         self._panel.value = self.contours_dialog = DatasetsDialog(self)
         self.contours_dialog.datasets_filter = lambda x: isinstance(x, Contours)
@@ -116,14 +116,12 @@ class FindOrientationWindow(BaseWidget):
                         if ok:
                             cv2.normalize(img,   img,   0, 255, cv2.NORM_MINMAX)
 
-                            v1 = img[:img.shape[0]/2].sum() / np.count_nonzero(img[:img.shape[0]/2])
-                            v2 = img[img.shape[0]/2:].sum() / np.count_nonzero(img[img.shape[0]/2:])
+                            v1 = img[:int(img.shape[0]/2)].sum() / np.count_nonzero(img[:int(img.shape[0]/2)])
+                            v2 = img[int(img.shape[0]/2):].sum() / np.count_nonzero(img[int(img.shape[0]/2):])
 
-                            if v1<v2: dataset.flip(i)
+                            if v1<v2: 
+                                dataset.flip(i)   
 
-
-
-            
             """
                     window      = 30
                     min_walked  = 50
@@ -145,8 +143,7 @@ class FindOrientationWindow(BaseWidget):
                     _, dir_walked_distance = dataset.calc_walked_distance_with_direction(window)
                     walked_distance        = savitzky_golay(np.array(walked_distance), window_size=savitzky_golay_window_size)
                     dir_walked_distance    = savitzky_golay(np.array(dir_walked_distance), window_size=savitzky_golay_window_size)
-                    
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
                     for i in range(begin, end):
                         self._progress.value = count; count+=1
                         if i>=len(walked_distance): continue
@@ -164,7 +161,7 @@ class FindOrientationWindow(BaseWidget):
 
                             if debug_mode: vflipped.set_value(i, 1) 
 
-                      
+
                     if debug_mode:
                         # create the values for debug ##########################################
                         v1 = dataset.object2d.create_value()
@@ -223,7 +220,7 @@ class FindOrientationWindow(BaseWidget):
 
                                 ok1, img_up   = dataset.get_image(i, mask=True, angle='up', size=(IMAGE_SIZE,IMAGE_SIZE) )
                                 ok2, img_down = dataset.get_image(i, mask=True, angle='down', size=(IMAGE_SIZE,IMAGE_SIZE) )
-                                
+                                print(ok1)
                                 if ok1 and ok2:
                                     cv2.normalize(img_up, img_up, 0, 255, cv2.NORM_MINMAX)
                                     cv2.normalize(img_down, img_down, 0, 255, cv2.NORM_MINMAX)
@@ -234,17 +231,17 @@ class FindOrientationWindow(BaseWidget):
                                     answers.append([0,1])
 
                                     v1.set_value(i, 
-                                        img_up[:img_up.shape[0]/2].sum() / np.count_nonzero(img_up[:img_up.shape[0]/2])
+                                        img_up[:int(img_up.shape[0]/2)].sum() / np.count_nonzero(img_up[:int(img_up.shape[0]/2)])
                                     )
                                     v2.set_value(i, 
-                                        img_up[img_up.shape[0]/2:].sum() / np.count_nonzero(img_up[img_up.shape[0]/2:])
+                                        img_up[int(img_up.shape[0]/2):].sum() / np.count_nonzero(img_up[int(img_up.shape[0]/2):])
                                     )
 
-                                    cv2.imwrite('/home/ricardo/Downloads/test/{0}.png'.format(i), img_up)
+                                    cv2.imwrite('/home/manuel/Desktop/test/{0}.png'.format(i), img_up)
                                     if debug_mode: vtrainning.set_value(i, 1)    
                                 
 
-                        
+                    print("1")    
                     train   = np.float32(train)
                     answers = np.float32(answers)
                     model.train(train, cv2.ml.ROW_SAMPLE, answers)
@@ -258,6 +255,8 @@ class FindOrientationWindow(BaseWidget):
                         v2.name = 'Est. orient. - step3 - prediction back'
                         v3 = dataset.object2d.create_value()
                         v3.name = 'Est. orient. - step3 - binary prediction'
+
+                    print("2") 
                     
                     for i in range(begin, end):
                         self._progress.value = count; count+=1
@@ -279,9 +278,9 @@ class FindOrientationWindow(BaseWidget):
                                     v1.set_value(i,resp[0][0])
                                     v2.set_value(i,resp[0][1]) 
                                     v3.set_value(i,resp.argmax()) 
-
-                       
             """
+                       
+            
         
 
                         
