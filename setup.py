@@ -6,7 +6,7 @@ import re
 
 setup(
 	name='Python video annotator - module - find orientation',
-	version=0.0,
+	version=0.1,
 	description="""""",
 	author=['Ricardo Ribeiro'],
 	author_email='ricardojvr@gmail.com',
